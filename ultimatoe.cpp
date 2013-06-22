@@ -7,6 +7,7 @@
 #include <vector>
 #include <assert.h>
 #include <tr1/array>
+#include <string.h>
 
 #define X 1
 #define O 2
