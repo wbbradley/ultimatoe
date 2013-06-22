@@ -11,6 +11,7 @@ Release/
 *.aps
 build/
 *.class
+*.swp
 *.apk
 *.ap_
 *.dex

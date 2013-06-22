@@ -9,7 +9,7 @@
 #include <array>
 
 #define X 1
-#define Y 2
+#define O 2
 
 typedef int piece_t;
 typedef int player_t;
@@ -41,17 +41,24 @@ struct meta_board_t
 {
 	std::array<board_t, 9> boards;
 	player_t next;
+	move_t last_move;
 
 	bool available(const move_t move) const
    	{ 
 		return boards[move.board].available(move.space);
 	}
 			
-	move_t last_move;
 	meta_board_t() : next(X), last_move(-1, -1)
 	{
 		for (auto &board : boards)
 			board.clear();
+	}
+
+	meta_board_t(const meta_board_t &prior_meta_board, const move_t move) : last_move(move)
+	{
+		boards = prior_meta_board.boards;
+		boards[move.board].spaces[move.space] = prior_meta_board.next;
+		next = (prior_meta_board.next == X) ? O : X;
 	}
 
 	void render() const
@@ -67,14 +74,14 @@ struct meta_board_t
 	
 	meta_board_t apply_move(const move_t move) const
 	{
-		// TODO: create a new board with this move applied
-		assert(0);
-		return meta_board_t();
+		assert(available(move));
+		return meta_board_t(*this, move);
 	}
 
 	bool game_over(player_t &winner, bool &tie) const
 	{
 		assert(0);
+
 		// TODO: compute whether there is a winner
 		return false;
 	}

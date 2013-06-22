@@ -1,4 +1,4 @@
-// REVIEWED
+#include <stdlib.h>
 #include "cmd_options.h"
 #include <algorithm>
 #include "logger_decls.h"
