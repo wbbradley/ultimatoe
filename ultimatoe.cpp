@@ -62,9 +62,59 @@ struct meta_board_t
 		next = (prior_meta_board.next == X) ? O : X;
 	}
 
+	static void render_space(piece_t space)
+	{
+		switch (space) {
+			case 0: std::cout << "-"; break;
+			case X: std::cout << "x"; break;
+			case O: std::cout << "o"; break;
+			default: assert(false); break;
+		}
+	}
+
+	void render_metaboard_row_row(int meta_row, int board_row) const
+	{
+		const char *sep = "";
+		for (int board = 3 * meta_row; board < 3 * meta_row + 3; ++board)
+		{
+			std::cout << sep;
+			sep = " | ";
+			for (int space = 3 * board_row; space < 3 * board_row + 3; ++space)
+			{
+				render_space(boards[board].spaces[space]);
+			}
+		}
+		std::cout << std::endl;	
+	}
+
+	void render_metaboard_row(int i) const
+	{
+		render_metaboard_row_row(i, 0);
+		render_metaboard_row_row(i, 1);
+		render_metaboard_row_row(i, 2);
+	}
+
 	void render() const
 	{
-		// TODO(bjabes)
+		//  
+		// oxo | xox | xxx 
+		// o-o | xox | x-x 
+		// ox- | -ox | xxx 
+		// =============== 
+		// oxo | xox | xxx 
+		// o-o | xox | x-x 
+		// ox- | -ox | xxx 
+		// =============== 
+		// oxo | xox | xxx 
+		// o-o | xox | x-x 
+		// ox- | -ox | xxx 
+		//  
+
+		render_metaboard_row(0);
+		std::cout << "===============" << std::endl;
+		render_metaboard_row(1);
+		std::cout << "===============" << std::endl;
+		render_metaboard_row(2);
 	}
 
 	move_t get_move() const
