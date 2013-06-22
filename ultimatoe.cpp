@@ -127,7 +127,7 @@ struct meta_board_t
 	static void render_space(piece_t space)
 	{
 		switch (space) {
-			case 0: std::cout << "-"; break;
+			case 0: std::cout << "·"; break;
 			case X: std::cout << "x"; break;
 			case O: std::cout << "o"; break;
 			default: assert(false); break;
@@ -173,22 +173,48 @@ struct meta_board_t
 		//
 
 		render_metaboard_row(0);
-		std::cout << "===============" << std::endl;
+		std::cout << "---------------" << std::endl;
 		render_metaboard_row(1);
-		std::cout << "===============" << std::endl;
+		std::cout << "---------------" << std::endl;
 		render_metaboard_row(2);
 	}
 
 	move_t get_move() const
 	{
-		// TODO(bjabes): get input from user
-		return move_t(-1, -1);
+		int board;
+		int space;
+		std::cout << "last move indicated board " << last_move.space << ". make a move sucka: ";
+		std::cin >> board >> space;
+		return move_t(board, space);
 	}
 	
 	meta_board_t apply_move(const move_t move) const
 	{
 		assert(available(move));
 		return meta_board_t(*this, move);
+	}
+
+	bool valid_move(move_t move)
+	{
+		if (last_move.board == -1)
+			return true;
+
+		if (available(move))
+		{
+			if (last_move.space == move.board)
+			{
+				std::cout << "playing in the indicated board => valid" << std::endl;
+				return true;
+			}
+
+			if (boards[last_move.space].winner())
+			{
+				std::cout << "indicated board is finished => valid" << std::endl;
+				return true;
+			}
+		}
+
+		return false;
 	}
 
 	bool game_over(player_t &winner, bool &tie) const
@@ -253,8 +279,11 @@ int main(int argc, char *argv[])
 	{
 		// play and remember valid move from current player
 		meta_board.render();
+l_redo_move:
 		move_t move = meta_board.get_move();
-		meta_board.apply_move(move);
+		if (!meta_board.valid_move(move))
+			goto l_redo_move;
+		meta_board = meta_board.apply_move(move);
 		player_t winner = 0;
 		bool tie = false;
 		if (meta_board.game_over(winner, tie))
