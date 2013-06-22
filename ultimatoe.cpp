@@ -5,8 +5,8 @@
 #include <fstream>
 #include <sstream>
 #include <vector>
-#include <tr1/array>
 #include <assert.h>
+#include <array>
 
 #define X 1
 #define Y 2
@@ -24,7 +24,7 @@ struct move_t
 
 struct board_t
 {
-	std::tr1::array<piece_t, 9> spaces;
+	std::array<piece_t, 9> spaces;
 	void clear()
 	{
 		for (auto &space : spaces)
@@ -39,7 +39,7 @@ struct board_t
 
 struct meta_board_t
 {
-	std::tr1::array<board_t, 9> boards;
+	std::array<board_t, 9> boards;
 	player_t next;
 
 	bool available(const move_t move) const

@@ -1,10 +1,10 @@
 // REVIEWED
 #pragma once
-#include "unordered.h"
 #include <string>
 #include <stdint.h>
+#include <unordered_map>
 
-typedef unordered_map<std::string, std::string> cmd_options_t;
+typedef std::unordered_map<std::string, std::string> cmd_options_t;
 
 struct cmd_option_t
 {
