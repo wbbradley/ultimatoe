@@ -2,9 +2,9 @@
 #pragma once
 #include <string>
 #include <stdint.h>
-#include <unordered_map>
+#include <tr1/unordered_map>
 
-typedef std::unordered_map<std::string, std::string> cmd_options_t;
+typedef std::tr1::unordered_map<std::string, std::string> cmd_options_t;
 
 struct cmd_option_t
 {

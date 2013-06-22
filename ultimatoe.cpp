@@ -6,7 +6,7 @@
 #include <sstream>
 #include <vector>
 #include <assert.h>
-#include <array>
+#include <tr1/array>
 
 #define X 1
 #define O 2
@@ -24,7 +24,7 @@ struct move_t
 
 struct board_t
 {
-	std::array<piece_t, 9> spaces;
+	std::tr1::array<piece_t, 9> spaces;
 	void clear()
 	{
 		for (auto &space : spaces)
@@ -39,7 +39,7 @@ struct board_t
 
 struct meta_board_t
 {
-	std::array<board_t, 9> boards;
+	std::tr1::array<board_t, 9> boards;
 	player_t next;
 	move_t last_move;
 

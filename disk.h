@@ -13,8 +13,9 @@
 #include <sys/param.h>
 #include <sys/stat.h>
 #include <string.h>
+#include <tr1/memory>
 
-using std::shared_ptr;
+using std::tr1::shared_ptr;
 
 bool folder_exists(const std::string &path);
 bool file_exists(const std::string &file_path);

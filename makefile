@@ -2,8 +2,8 @@ UNAME := $(shell uname)
 DEBUG_FLAGS := -DDEBUG -g -O0
 NDEBUG_FLAGS := -g -O3
 
-CPP = clang++ -std=c++11 -stdlib=libc++ -DMACOS
-LINKER = clang++ -stdlib=libc++
+CPP = clang++ -std=gnu++0x -DMACOS
+LINKER = clang++ -stdlib=libstdc++ -lstdc++
 LINKER_OPTS := $(NDEBUG_FLAGS)
 LINKER_DEBUG_OPTS := $(DEBUG_FLAGS)
 
