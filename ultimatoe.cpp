@@ -75,7 +75,7 @@ player_t game_over(const B &board, player_t &winner, bool &tie)
 struct board_t
 {
 	board_t()
-   	{
+	{
 		memset(&spaces[0], 0, sizeof(piece_t) * 9);
 	}
 	std::tr1::array<piece_t, 9> spaces;
@@ -107,7 +107,7 @@ struct meta_board_t
 	move_t last_move;
 
 	bool available(const move_t move) const
-   	{ 
+	{ 
 		return boards[move.board].available(move.space);
 	}
 			
@@ -158,7 +158,7 @@ struct meta_board_t
 
 	void render() const
 	{
-		//  
+		//
 		// oxo | xox | xxx 
 		// o-o | xox | x-x 
 		// ox- | -ox | xxx 
@@ -170,7 +170,7 @@ struct meta_board_t
 		// oxo | xox | xxx 
 		// o-o | xox | x-x 
 		// ox- | -ox | xxx 
-		//  
+		//
 
 		render_metaboard_row(0);
 		std::cout << "===============" << std::endl;
