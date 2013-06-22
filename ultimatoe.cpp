@@ -31,7 +31,7 @@ bool all_spaces_owned(const board_t &board);
 bool all_spaces_owned(const meta_board_t &board);
 
 template <typename B>
-player_t game_over(const B &board, player_t &winner, bool &tie)
+bool game_over(const B &board, player_t &winner, bool &tie)
 {
 	struct 
 	{
@@ -69,6 +69,8 @@ player_t game_over(const B &board, player_t &winner, bool &tie)
 		return true;
 	}
 
+	winner = 0;
+	tie = false;
 	return false;
 }
 
@@ -113,8 +115,9 @@ struct meta_board_t
 			
 	meta_board_t() : next(X), last_move(-1, -1)
 	{
-		for (auto &board : boards)
-			board.clear();
+		memset(this, 0, sizeof(*this));
+		next = X;
+		last_move = move_t(-1, -1);
 	}
 
 	meta_board_t(const meta_board_t &prior_meta_board, const move_t move) : last_move(move)
@@ -201,17 +204,33 @@ struct meta_board_t
 
 		if (available(move))
 		{
-			if (last_move.space == move.board)
+			player_t winner = 0;
+			bool tie = false;
+			if (::game_over(boards[move.board], winner, tie))
 			{
-				std::cout << "playing in the indicated board => valid" << std::endl;
-				return true;
+				std::cout << '(' << move.board << ", " << move.space << ") playing in a finished board => invalid" << std::endl;
+				return false;
 			}
 
-			if (boards[last_move.space].winner())
+			if (last_move.space == move.board)
 			{
-				std::cout << "indicated board is finished => valid" << std::endl;
+				std::cout << '(' << move.board << ", " << move.space << ") playing in the indicated board => valid" << std::endl;
 				return true;
 			}
+			else
+			{
+				std::cout << '(' << move.board << ", " << move.space << ") last move space is not on this move board" << std::endl;
+			}
+
+			if (::game_over(boards[last_move.space], winner, tie))
+			{
+				std::cout << '(' << move.board << ", " << move.space << ") indicated board is finished => valid" << std::endl;
+				return true;
+			}
+		}
+		else
+		{
+			std::cout << '(' << move.board << ", " << move.space << ") move is unavailable" << std::endl;
 		}
 
 		return false;
@@ -247,7 +266,9 @@ bool all_spaces_owned(const meta_board_t &meta_board)
 {
 	for (const auto &board : meta_board.boards)
 	{
-		if (!board.winner())
+		player_t winner = 0;
+		bool tie = false;
+		if (!::game_over(board, winner, tie))
 			return false;
 	}
 	return true;
@@ -255,15 +276,14 @@ bool all_spaces_owned(const meta_board_t &meta_board)
 
 int main(int argc, char *argv[])
 {
-	// setup a board
-	meta_board_t meta_board;
-
 	if (argc == 2 && strcmp(argv[1], "-t") == 0)
 	{
 		std::cout << "Running ultimatoe tests..." << std::endl;
 
-		// test simple game over cases
+		// setup a board
 		meta_board_t meta_board;
+
+		// test simple game over cases
 		meta_board.boards[0].spaces[0] = X;
 		meta_board.boards[0].spaces[1] = X;
 		meta_board.boards[0].spaces[2] = X;
@@ -275,15 +295,97 @@ int main(int argc, char *argv[])
 		return EXIT_SUCCESS;
 	}
 
+	if (argc == 2 && strcmp(argv[1], "-r") == 0)
+	{
+		srandomdev();
+		float total_moves = 0;
+		float total_valid_moves = 0;
+		int iterations = 100;
+		struct bucket_t
+		{
+			bucket_t() : total_avail_moves(0), hits(1) {}
+			int total_avail_moves;
+			int hits;
+		};
+		std::vector<bucket_t> buckets;
+		for (int iters = 0; iters < iterations; ++iters)
+		{
+			// setup a board
+			meta_board_t meta_board;
+
+			float moves = 0;
+			int move_index = 0;
+			do
+			{
+				// play and remember valid move from current player
+				meta_board.render();
+
+				int avail_move_count = 0;
+				for (int i = 0; i < 9; ++i)
+				{
+					for (int j = 0; j < 9; ++j)
+					{
+						if (meta_board.valid_move(move_t(i, j)))
+							++avail_move_count;
+					}
+				}
+				std::cout << "asdfasdfasd";
+				total_valid_moves += avail_move_count;
+				if (buckets.size() < move_index + 1)
+				{
+					buckets.push_back(bucket_t());
+				}
+				else
+				{
+					++buckets[move_index].hits;
+				}
+				buckets[move_index].total_avail_moves += avail_move_count;
+				while (true)
+				{
+					move_t move(random() % 9, random() % 9);
+					if (!meta_board.valid_move(move))
+						continue;
+					meta_board = meta_board.apply_move(move);
+					++moves;
+					++move_index;
+					break;
+				}
+				player_t winner = 0;
+				bool tie = false;
+				if (meta_board.game_over(winner, tie))
+				{
+					// TODO: print status
+					break;
+				}
+			}
+			while (true);
+			std::cout << "game over";
+			total_moves += moves;
+		}
+		std::cout << "average moves per game is " << float(total_moves) / iterations << std::endl;
+		std::cout << "average available moves per move is " << total_valid_moves / float(total_moves);
+		std::cout << std::endl;
+		for (int i = 0; i < buckets.size(); ++i)
+		{
+			std::cout << "[" << i << ", " << float(buckets[i].total_avail_moves) / float(buckets[i].hits) << "] ";
+		}
+		std::cout << std::endl;
+		return EXIT_SUCCESS;
+	}
+
 	do
 	{
+		meta_board_t meta_board;
 		// play and remember valid move from current player
 		meta_board.render();
-l_redo_move:
-		move_t move = meta_board.get_move();
-		if (!meta_board.valid_move(move))
-			goto l_redo_move;
-		meta_board = meta_board.apply_move(move);
+		while (true)
+		{
+			move_t move = meta_board.get_move();
+			if (!meta_board.valid_move(move))
+				continue;
+			meta_board = meta_board.apply_move(move);
+			break;
+		}
 		player_t winner = 0;
 		bool tie = false;
 		if (meta_board.game_over(winner, tie))
