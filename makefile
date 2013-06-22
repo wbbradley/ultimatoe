@@ -37,6 +37,7 @@ build-dir:
 .PHONY: test
 
 test: $(STR_REPL_TARGET)
+	./ultimatoe -t
 	@echo Test passed.
 
 $(STR_REPL_TARGET): $(STR_REPL_OBJECTS)

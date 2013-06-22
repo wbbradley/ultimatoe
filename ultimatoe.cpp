@@ -93,6 +93,12 @@ int main(int argc, char *argv[])
 	// setup a board
 	meta_board_t meta_board;
 
+	if (argc == 2 && strcmp(argv[1], "-t") == 0)
+	{
+		std::cout << "asdf" << std::endl;
+		return EXIT_SUCCESS;
+	}
+
 	do
 	{
 		// play and remember valid move from current player
