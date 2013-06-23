@@ -1,3 +1,0 @@
-[submodule "tools/prepp"]
-	path = tools/prepp
-	url = git@github.com:wbbradley/prepp.git
