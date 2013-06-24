@@ -7,7 +7,7 @@
 #include <vector>
 #include <signal.h>
 #include <string.h>
-
+#include <list>
 #include <array>
 using std::array;
 
@@ -191,9 +191,10 @@ struct meta_board_t
 		render_metaboard_row(2);
 		std::cout << std::endl;
 	}
-	move_t get_move() const
+	move_t get_move(bool _render = true) const
 	{
-		render();
+		if (_render)
+			render();
 		int board;
 		int space;
 		std::cout << "Last move indicated board " << last_move.space << ". make a move player [";
@@ -289,21 +290,126 @@ std::vector<move_t> get_valid_moves(const meta_board_t &meta_board)
 	return moves;
 }
 
-struct retval_t
+enum score_kind_t
 {
-	int score;
-	std::vector<move_t> moves;
+	score_kind_win = 0,
+	score_kind_loss,
+	score_kind_tie,
+	score_kind_null,
+	score_kind_value,
+};
+
+struct score_t
+{
+	score_t(score_kind_t score_kind = score_kind_null, int value = 0) : score_kind(score_kind), value(value) {}
+
+	bool game_over() const
+	{
+		switch (score_kind)
+		{
+		case score_kind_win:
+		case score_kind_loss:
+		case score_kind_tie:
+			return true;
+		case score_kind_value:
+			return false;
+		case score_kind_null:
+			assert(false);
+		default:
+			assert(false);
+		};
+		return false;
+	}
+
+	bool beats(const score_t &rhs, bool max) const
+	{
+		if (rhs.score_kind == score_kind_null)
+			return true;
+		switch (score_kind)
+		{
+		case score_kind_null:
+			assert(false);
+			return false;
+		case score_kind_win:
+			return max;
+		case score_kind_loss:
+			switch (rhs.score_kind)
+			{
+			case score_kind_null:
+				return true;
+			case score_kind_win:
+			case score_kind_loss:
+			case score_kind_tie:
+			case score_kind_value:
+				return !max;
+			}
+			assert(false);
+			return !max;
+		case score_kind_tie:
+			switch (rhs.score_kind)
+			{
+			case score_kind_null:
+				return true;
+			case score_kind_loss:
+				return max;
+			case score_kind_win:
+			case score_kind_tie:
+			case score_kind_value:
+				return !max;
+			}
+			assert(false);
+			return !max;
+		case score_kind_value:
+			switch (rhs.score_kind)
+			{
+			case score_kind_null:
+				return true;
+			case score_kind_loss:
+			case score_kind_tie:
+				return max;
+			case score_kind_win:
+				return !max;
+			case score_kind_value:
+				return max ? (value > rhs.value) : (rhs.value > value);
+			}
+			assert(false);
+			return !max;
+		}
+		assert(false);
+		return !max;
+	}
+	score_kind_t score_kind;
+	int value;
+};
+
+struct move_score_t
+{
+	move_t move;
+	score_t score;
+};
+
+struct search_result_t
+{
+	void init(const move_t move, score_t score) 
+	{
+		move_score_t move_score = {move, score};
+		move_scores.clear();
+		move_scores.push_back(move_score);
+	}
+	score_t score() const
+	{
+		if (move_scores.size() == 0)
+			return score_t();
+		else
+			return move_scores.back().score;
+	}
+	std::list<move_score_t> move_scores;
 };
 
 template <typename F>
-retval_t min_max(bool maximus, int depth, const meta_board_t &meta_board, F heuristic)
+void min_max(search_result_t &search_result, bool maximus, int depth, const meta_board_t &meta_board, F heuristic)
 {
 	auto moves = get_valid_moves(meta_board);
-    int best_score;
-    if (maximus)
-        best_score = (int)-2e20;
-    else
-        best_score = (int)2e20;
 
 	for (auto &move : moves)
 	{
@@ -313,40 +419,86 @@ retval_t min_max(bool maximus, int depth, const meta_board_t &meta_board, F heur
 	if (depth == 0)
 	{
 		move_t best_move;
+		score_t best_score;
         assert(moves.size() > 0);
 		for (auto &move : moves)
 		{
-			int score = heuristic(meta_board.apply_move(move));
-			if ((maximus && (best_score < score)) || (!maximus && (best_score > score)))
+			auto score = heuristic(meta_board.apply_move(move));
+			if (score.beats(best_score, maximus))
 			{
 				best_move = move;
 				best_score = score;
+				continue;
 			}
 		}
 
-		retval_t retval;
-		retval.moves.push_back(best_move);
-		retval.score = best_score;
-		return retval;
+		search_result.init(best_move, best_score);
 	}
 	else
 	{
-		retval_t best_retval;
+		move_t best_move;
+		score_t best_score;
+		search_result_t top_search_result;
 		for (auto &move : moves)
 		{
-			auto retval = min_max(!maximus, depth - 1, meta_board.apply_move(move), heuristic);
-			if ((maximus && (best_score < retval.score)) || (!maximus && (best_score > retval.score)))
+			meta_board_t meta_board_result = meta_board.apply_move(move);
+			score_t score = heuristic(meta_board_result);
+			if (score.game_over())
 			{
-				best_score = retval.score;
-				best_retval = retval;
-				best_retval.moves.push_back(move);
+				if (score.beats(best_score, maximus))
+				{
+					best_score = score;
+					best_move = move;
+					top_search_result.init(best_move, best_score);
+				}
+			}
+			else
+			{
+				search_result_t deep_search_result;
+				min_max(deep_search_result, !maximus, depth - 1, meta_board_result, heuristic);
+				if (deep_search_result.score().beats(best_score, maximus))
+				{
+					best_move = move;
+					best_score = deep_search_result.score();
+					top_search_result = deep_search_result;
+					top_search_result.move_scores.push_front({move, score});
+				}
 			}
 		}
-		return best_retval;
+		search_result = top_search_result;
+	}
+	assert(search_result.score().beats(score_t(), true));
+	assert(search_result.score().beats(score_t(), false));
+	assert(search_result.score().score_kind != score_kind_null);
+}
+std::ostream &operator <<(std::ostream &os, const score_t &score)
+{
+	switch (score.score_kind)
+	{
+	case score_kind_null:
+		assert(false);
+		return os << "null";
+	case score_kind_loss:
+		return os << "loss";
+	case score_kind_tie:
+		return os << "tie";
+	case score_kind_win:
+		return os << "win";
+	case score_kind_value:
+		return os << score.value;
 	}
 }
 int main(int argc, char *argv[])
 {
+	score_t score_a(score_kind_value, 0);
+	score_t score_b(score_kind_value, -1);
+	assert(score_a.beats(score_b, true));
+	assert(score_b.beats(score_a, false));
+	assert(score_t(score_kind_win).beats(score_a, true));
+	assert(!score_t(score_kind_win).beats(score_a, false));
+	assert(score_a.beats(score_t(score_kind_loss), true));
+	assert(!score_a.beats(score_t(score_kind_loss), false));
+
 	if (argc == 2 && strcmp(argv[1], "-t") == 0)
 	{
 		std::cout << "Running ultimatoe tests..." << std::endl;
@@ -441,6 +593,7 @@ int main(int argc, char *argv[])
 	{
 		// setup a board
 		meta_board_t meta_board;
+		meta_board.render();
 		do
 		{
 			while (true)
@@ -448,7 +601,7 @@ int main(int argc, char *argv[])
 				move_t move;
 				if (meta_board.next == O)
 				{
-					move = meta_board.get_move();
+					move = meta_board.get_move(false /*render*/);
 					if (!meta_board.valid_move(move))
 					{
 						continue;
@@ -456,47 +609,58 @@ int main(int argc, char *argv[])
 				}
 				else
 				{
-					auto retval = min_max(true /*maximus*/, 4 /*depth*/, meta_board, [](const meta_board_t &meta_board)
+					search_result_t search_result;
+					min_max(search_result, true /*maximus*/, 5 /*depth*/, meta_board, [](const meta_board_t &meta_board)
 					{
 						player_t meta_winner = 0;
 						bool tie = false;
-						meta_board.game_over(meta_winner, tie);
+						if (meta_board.game_over(meta_winner, tie))
+						{
+							if (meta_winner == X)
+								return score_t(score_kind_win);
+							else if (meta_winner == O)
+								return score_t(score_kind_loss);
+							assert(tie);
+							return score_t(score_kind_tie);
+						}
 
 						int score = 0;
-						if (meta_winner == X)
-							score += 2e19;
-						else if (meta_winner == O)
-							score -= 2e19;
 						
 						for (auto &board : meta_board.boards)
 						{
-							if (board.spaces[4] == X)
-								score += 1000;
-							if (board.spaces[4] == O)
-								score -= 499;
-
 							auto winner = board.winner();
-
 							if (winner == X)
-								score += 100;
+							{
+								score += 10000;
+							}
 							else if (winner == O)
-								score -= 99;
+							{
+								score -= 9999;
+							}
+							else
+							{
+								if (board.spaces[4] == X)
+									score += 1000;
+								if (board.spaces[4] == O)
+									score -= 999;
+							}
 						}
 
-						return score;
+						return score_t(score_kind_value, score);
 					});
-					move = retval.moves.back();
 					std::cout << "Here's why: " << std::endl;
 					const char *sep = "";
-					for (int i = retval.moves.size() - 1; i >= 0; --i)
+					for (auto &move_score : search_result.move_scores)
 					{
-						auto &move = retval.moves[i];
-						std::cout << sep << '[' << move.board << ", " << move.space << ']';
+						std::cout << sep << '[' << move_score.move.board << ", " << move_score.move.space << ", " << move_score.score << ']';
 						sep = ", ";
 					}
-					std::cout << " (scoring: " << retval.score << ")" << std::endl;
+					std::cout << std::endl;
+					
+					move = search_result.move_scores.front().move;
 				}
 				meta_board = meta_board.apply_move(move);
+				meta_board.render();
 				break;
 			}
 			player_t winner = 0;
