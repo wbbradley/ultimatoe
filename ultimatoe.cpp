@@ -296,19 +296,19 @@ struct retval_t
 };
 
 template <typename F>
-retval_t find_best_move(bool maximus, int depth, const meta_board_t &meta_board, F heuristic)
+retval_t min_max(bool maximus, int depth, const meta_board_t &meta_board, F heuristic)
 {
 	auto moves = get_valid_moves(meta_board);
-	for (auto &move : moves)
-	{
-		assert(meta_board.available(move));
-	}
-
     int best_score;
     if (maximus)
         best_score = (int)-2e20;
     else
         best_score = (int)2e20;
+
+	for (auto &move : moves)
+	{
+		assert(meta_board.available(move));
+	}
 
 	if (depth == 0)
 	{
@@ -334,7 +334,7 @@ retval_t find_best_move(bool maximus, int depth, const meta_board_t &meta_board,
 		retval_t best_retval;
 		for (auto &move : moves)
 		{
-			auto retval = find_best_move(!maximus, depth - 1, meta_board.apply_move(move), heuristic);
+			auto retval = min_max(!maximus, depth - 1, meta_board.apply_move(move), heuristic);
 			if ((maximus && (best_score < retval.score)) || (!maximus && (best_score > retval.score)))
 			{
 				best_score = retval.score;
@@ -456,20 +456,20 @@ int main(int argc, char *argv[])
 				}
 				else
 				{
-					auto retval = find_best_move(true /*maximus*/, 4 /*depth*/, meta_board, [](const meta_board_t &meta_board)
+					auto retval = min_max(true /*maximus*/, 4 /*depth*/, meta_board, [](const meta_board_t &meta_board)
 					{
 						player_t meta_winner = 0;
 						bool tie = false;
 						meta_board.game_over(meta_winner, tie);
 
 						int score = 0;
+						if (meta_winner == X)
+							score += 2e19;
+						else if (meta_winner == O)
+							score -= 2e19;
+						
 						for (auto &board : meta_board.boards)
 						{
-							if (meta_winner == X)
-								score += 2e19;
-							else if (meta_winner == O)
-								score -= 2e19;
-							
 							if (board.spaces[4] == X)
 								score += 1000;
 							if (board.spaces[4] == O)
@@ -480,7 +480,7 @@ int main(int argc, char *argv[])
 							if (winner == X)
 								score += 100;
 							else if (winner == O)
-								score -= 100;
+								score -= 99;
 						}
 
 						return score;
