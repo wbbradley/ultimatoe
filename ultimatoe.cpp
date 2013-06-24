@@ -288,8 +288,15 @@ std::vector<move_t> get_valid_moves(const meta_board_t &meta_board)
 	}
 	return moves;
 }
+
+struct retval_t
+{
+	int score;
+	std::vector<move_t> moves;
+};
+
 template <typename F>
-std::pair<move_t, int> find_best_move(bool maximus, int depth, const meta_board_t &meta_board, F heuristic)
+retval_t find_best_move(bool maximus, int depth, const meta_board_t &meta_board, F heuristic)
 {
 	auto moves = get_valid_moves(meta_board);
 	for (auto &move : moves)
@@ -297,8 +304,7 @@ std::pair<move_t, int> find_best_move(bool maximus, int depth, const meta_board_
 		assert(meta_board.available(move));
 	}
 
-    move_t best_move;
-    int best_score = 0;
+    int best_score;
     if (maximus)
         best_score = (int)-2e20;
     else
@@ -306,39 +312,37 @@ std::pair<move_t, int> find_best_move(bool maximus, int depth, const meta_board_
 
 	if (depth == 0)
 	{
+		move_t best_move;
         assert(moves.size() > 0);
 		for (auto &move : moves)
 		{
 			int score = heuristic(meta_board.apply_move(move));
-			std::cout << "best(" << best_score << ") score is " << score << std::endl;
 			if ((maximus && (best_score < score)) || (!maximus && (best_score > score)))
 			{
-				std::cout << "best_move at depth " << depth << " is " << move.board << ", " << move.space << std::endl;
 				best_move = move;
-				assert(best_move.board == move.board);
 				best_score = score;
 			}
 		}
-		assert(best_move.board >= 0);
-		assert(best_move.space >= 0);
-		return std::pair<move_t, int>(best_move, best_score);
+
+		retval_t retval;
+		retval.moves.push_back(best_move);
+		retval.score = best_score;
+		return retval;
 	}
 	else
 	{
-
+		retval_t best_retval;
 		for (auto &move : moves)
 		{
-			auto move_value = find_best_move(!maximus, depth - 1, meta_board.apply_move(move), heuristic);
-			if ((maximus && (best_score < move_value.second)) || (!maximus && (best_score > move_value.second)))
+			auto retval = find_best_move(!maximus, depth - 1, meta_board.apply_move(move), heuristic);
+			if ((maximus && (best_score < retval.score)) || (!maximus && (best_score > retval.score)))
 			{
-				std::cout << "best_move at depth " << depth << " is " << move.board << ", " << move.space << std::endl;
-				best_move = move;
-				best_score = move_value.second;
+				best_score = retval.score;
+				best_retval = retval;
+				best_retval.moves.push_back(move);
 			}
 		}
-		assert(best_move.board >= 0);
-		assert(best_move.space >= 0);
-		return std::pair<move_t, int>(best_move, best_score);
+		return best_retval;
 	}
 }
 int main(int argc, char *argv[])
@@ -439,7 +443,6 @@ int main(int argc, char *argv[])
 		meta_board_t meta_board;
 		do
 		{
-			std::vector<move_t> moves;
 			while (true)
 			{
 				move_t move;
@@ -453,12 +456,45 @@ int main(int argc, char *argv[])
 				}
 				else
 				{
-					auto value = find_best_move(true /*maximus*/, 1 /*depth*/, meta_board, [](const meta_board_t &meta_board)
+					auto retval = find_best_move(true /*maximus*/, 4 /*depth*/, meta_board, [](const meta_board_t &meta_board)
 					{
-						return rand();
+						player_t meta_winner = 0;
+						bool tie = false;
+						meta_board.game_over(meta_winner, tie);
+
+						int score = 0;
+						for (auto &board : meta_board.boards)
+						{
+							if (meta_winner == X)
+								score += 2e19;
+							else if (meta_winner == O)
+								score -= 2e19;
+							
+							if (board.spaces[4] == X)
+								score += 1000;
+							if (board.spaces[4] == O)
+								score -= 499;
+
+							auto winner = board.winner();
+
+							if (winner == X)
+								score += 100;
+							else if (winner == O)
+								score -= 100;
+						}
+
+						return score;
+					});
+					move = retval.moves.back();
+					std::cout << "Here's why: " << std::endl;
+					const char *sep = "";
+					for (int i = retval.moves.size() - 1; i >= 0; --i)
+					{
+						auto &move = retval.moves[i];
+						std::cout << sep << '[' << move.board << ", " << move.space << ']';
+						sep = ", ";
 					}
-					);
-					move = value.first;
+					std::cout << " (scoring: " << retval.score << ")" << std::endl;
 				}
 				meta_board = meta_board.apply_move(move);
 				break;
