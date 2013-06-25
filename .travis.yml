@@ -1,2 +1,2 @@
 language: cpp
-script: ls /usr/include/c++
+script: ls /usr/include/c++/4.6.3
