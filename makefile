@@ -7,7 +7,7 @@ LINKER = clang -arch x86_64 -stdlib=libc++ -lc++
 #-lstdc++
 LINKER_OPTS := $(DEBUG_FLAGS)
 LINKER_DEBUG_OPTS := $(DEBUG_FLAGS)
-ULTIMATOE := python tools/prepp/prepp.py
+PREPP := python tools/prepp/prepp.py cpp
 
 BUILD_DIR = build
 
@@ -19,16 +19,13 @@ CFLAGS := \
 	-DDEBUG \
 	-g \
 
-ULTIMATOE_SOURCES = \
+ULTIMATOE_PREPP_SOURCES = \
+	ultimatoe.prepp \
 
 ULTIMATOE_CPP_SOURCES = \
-				 ultimatoe.cpp \
-
-ULTIMATOE_CPP = \
-	$(addprefix $(BUILD_DIR)/,$(ULTIMATOE_SOURCES:.prepp=.cpp)) \
 
 ULTIMATOE_OBJECTS = \
-	$(ULTIMATOE_CPP:.cpp=.o) \
+	$(addprefix $(BUILD_DIR)/,$(ULTIMATOE_PREPP_SOURCES:.prepp=.o)) \
 	$(addprefix $(BUILD_DIR)/,$(ULTIMATOE_CPP_SOURCES:.cpp=.o))
 
 ULTIMATOE_TARGET = ultimatoe
@@ -53,11 +50,14 @@ $(ULTIMATOE_TARGET): $(ULTIMATOE_OBJECTS)
 $(BUILD_DIR)/%.o: %.cpp
 	$(CPP) $(CFLAGS) $< -o $@
 
-$(BUILD_DIR)/%.o: $(BUILD_DIR)/%.cpp
+$(BUILD_DIR)/%.ii: $(BUILD_DIR)/%.prepp.cpp
+	$(CPP) $(CFLAGS) -E $< > $@
+
+$(BUILD_DIR)/%.o: $(BUILD_DIR)/%.ii
 	$(CPP) $(CFLAGS) $< -o $@
 
-$(BUILD_DIR)/%.cpp: %.prepp
-	$(ULTIMATOE) cpp $< > $@
+$(BUILD_DIR)/%.prepp.cpp: %.prepp
+	$(PREPP) $< > $@
 
 CLEAN = rm -rf $(BUILD_DIR)/*.o $(BUILD_DIR)/*.cpp $(TARGETS)
 
